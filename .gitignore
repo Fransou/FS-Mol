@@ -351,5 +351,7 @@ MigrationBackup/
 
 
 
-#DATA
+#CUSTOM
 datasets/
+*.csv
+**wandb**
