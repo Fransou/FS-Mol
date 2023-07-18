@@ -37,8 +37,8 @@ class SimpleshotNet(nn.Module):
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
 
     def forward(self, x):
-        x_pos = self.temperature * (self.cos(x, self.prototype_pos))
-        x_neg = self.temperature * (self.cos(x, self.prototype_neg))
+        x_pos = self.temperature * (self.cos(x, self.prototype_pos)+ self.bias_pos)
+        x_neg = self.temperature * (self.cos(x, self.prototype_neg) + self.bias_neg)
         x = torch.sigmoid(x_pos) / (torch.sigmoid(x_pos) + torch.sigmoid(x_neg))
         return x
 
@@ -51,7 +51,9 @@ class SimpleshotNet(nn.Module):
         y_query_pred = self.forward(x_query)
         entropy_query = self.entropy(y_query_pred)
 
-        return cross_entopy_support + self.lmbd_entropy * entropy_query
+        return (cross_entopy_support + self.lmbd_entropy * entropy_query) / (
+            1 + self.lmbd_entropy
+        )
 
 
 class ShannonEntroy(nn.Module):

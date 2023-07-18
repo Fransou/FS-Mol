@@ -32,6 +32,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+FS_MOL_CHECKOUT_PATH = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+FS_MOL_DATASET_PATH = os.path.join(
+    os.path.abspath(os.path.join(os.getcwd(), os.pardir)), "datasets/fs-mol"
+)
+os.chdir(FS_MOL_CHECKOUT_PATH)
+sys.path.insert(0, FS_MOL_CHECKOUT_PATH)
+
 
 def update_wandb_config(config, name):
     """Update wandb config"""
@@ -93,18 +100,19 @@ def parse_command_line():
     return args
 
 
-def test(name,fold, descriptor, support_set_size, out_file, model_config):
-    wandb.login()
+def test(
+    name, fold, descriptor, support_set_size, out_file, model_config, wandb_init=True
+):
+    wandb.init(
+        project="FS-Mol",
+        name=name,
+    )
+
 
     def update_wandb_config(config, name):
         """Update wandb config"""
 
         wandb.config.update({f"{name}": asdict(config)})
-
-    wandb.init(
-        project="FS-Mol",
-        name=name,
-    )
 
     wandb.config.update({"descriptor": descriptor})
     wandb.config.update({"support_set_size": support_set_size})
@@ -115,13 +123,6 @@ def test(name,fold, descriptor, support_set_size, out_file, model_config):
     logger.info(f"Model config: {model_config}")
 
     FOLD = DataFold[fold]
-
-    FS_MOL_CHECKOUT_PATH = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-    FS_MOL_DATASET_PATH = os.path.join(
-        os.path.abspath(os.path.join(os.getcwd(), os.pardir)), "datasets/fs-mol"
-    )
-    os.chdir(FS_MOL_CHECKOUT_PATH)
-    sys.path.insert(0, FS_MOL_CHECKOUT_PATH)
     fsmol_dataset = FSMolDataset.from_directory(FS_MOL_DATASET_PATH)
 
     p_bar = tqdm(
@@ -188,20 +189,29 @@ def test(name,fold, descriptor, support_set_size, out_file, model_config):
             )
         }
     )
-    full_results.to_csv(out_file)
+    if not out_file == "":
+        full_results.to_csv(out_file)
     wandb.finish()
+
 
 if __name__ == "__main__":
     args = parse_command_line()
-
-    name,fold, descriptor, support_set_size, out_file = args.name, args.fold, args.descriptor, args.support_set_size, args.out_file
+    name, fold, descriptor, support_set_size, out_file = (
+        args.name,
+        args.fold,
+        args.descriptor,
+        args.support_set_size,
+        args.out_file,
+    )
     name = (
         name
         if not name == ""
         else f"""Simpleshot_{time.strftime("%d_%b_%H_%M", time.localtime())}"""
     )
+
+    wandb.login()
+
     with open(args.model_config, "r") as f:
         model_config = json.load(f)
     model_config = SimpleShotConfig(**model_config)
-    test(name,fold, descriptor, support_set_size, out_file, model_config)
-
+    test(name, fold, descriptor, support_set_size, out_file, model_config)

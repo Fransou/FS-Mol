@@ -4,6 +4,7 @@ Utils functions for SimpleShot testing
 import sys
 
 from dataclasses import dataclass, field
+import itertools
 
 from typing import List, Tuple, Optional, Dict, Any
 import pandas as pd
@@ -51,6 +52,7 @@ def preprocess_embeddings(X_support, X_query, center_data=True, normalize_norm=T
         X_query = X_query / np.linalg.norm(X_query, axis=1, keepdims=True)
 
     return X_support, X_query
+
 
 class SimpleShotTrainer:
     def __init__(self, config: SimpleShotConfig):
@@ -140,12 +142,3 @@ def test_model_fn(
     if p_bar is not None:
         p_bar.update(1)
     return test_metrics
-
-
-@dataclass(frozen=True)
-class SimpleShotHPOConfig:
-    learning_rate: List[float] = field(default_factory =[1e-3])
-    epochs: List[int] = field(default_factory =[10])
-    clip_grad_norm: List[float] = field(default_factory =[1.0])
-    center_data: List[bool] = field(default_factory =[True, False])
-    normalize_norm: List[bool] = field(default_factory =[True, False])
