@@ -63,7 +63,7 @@ def parse_command_line():
     parser.add_argument(
         "--model_config",
         type=str,
-        default="configs/SimpleshotConfig/model_config.json",
+        default="fs_mol/configs/SimpleshotConfig/model_config.json",
         help="Path to the model config file",
     )
 

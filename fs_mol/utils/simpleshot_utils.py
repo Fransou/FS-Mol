@@ -65,13 +65,13 @@ class SimpleShotTrainer:
             center_data=self.config.center_data,
             normalize_norm=self.config.normalize_norm,
         )
-        proto_pos = X_support[y_support == 1].mean(axis=0)
-        proto_neg = X_support[y_support == 0].mean(axis=0)
 
-        model = SimpleshotNet([proto_pos, proto_neg], self.config)
+        model = SimpleshotNet(
+            X_support[y_support == 1], X_support[y_support == 0], self.config
+        )
         optimizer = torch.optim.Adam(model.parameters(), self.config.learning_rate)
 
-        for i in range(self.config.epochs):
+        for _ in range(self.config.epochs):
             optimizer.zero_grad()
             loss = model.get_loss(
                 torch.tensor(X_support, dtype=torch.float32),

@@ -88,6 +88,8 @@ def run_hpo_factory(args, name):
             clip_grad_norm=wandb.config["clip_grad_norm"],
             center_data=wandb.config["center_data"],
             normalize_norm=wandb.config["normalize_norm"],
+            distance=wandb.config["distance"],
+            bias=wandb.config["bias"],
         )
         test(
             model_config=model_config,
@@ -106,7 +108,7 @@ if __name__ == "__main__":
     args = parse_command_line()
 
     if args.name == "":
-        name = f"""Simpleshot_HPO_"""
+        name = "Simpleshot_HPO_"
     else:
         name = args.name
 
@@ -114,13 +116,16 @@ if __name__ == "__main__":
         "method": "random",
         "metric": {"name": "delta_aucpr_16", "goal": "maximize"},
         "parameters": {
-            "lmbd_entropy": {"min": 0.0, "max": 1.0},
-            "temperature": {"min": 0.1, "max": 20.0},
-            "learning_rate": {"values": [1e-3, 1e-4]},
-            "epochs": {"min": 5, "max": 20},
+            "lmbd_entropy": {"min": 0.0, "max": 0.5},
+            "temperature": {"min": 0.1, "max": 3.0},
+            "learning_rate": {"values": [1e-3]},
+            "epochs": {"values": [10]},
             "clip_grad_norm": {"values": [1.0]},
-            "center_data": {"values": [True]},
-            "normalize_norm": {"values": [True, False]},
+            "center_data": {"values": [True, False]},
+            "normalize_norm": {"values": [True]},
+            "distance": {"values": ["cosine"]},
+            "bias": {"values": [True, False]},
+            "out_shape":{"values": [16,32,64,128]},
         },
     }
 
@@ -128,4 +133,4 @@ if __name__ == "__main__":
 
     sweep_id = wandb.sweep(sweep=sweep_config, project="FS-Mol")
 
-    wandb.agent(sweep_id, function=hpo_fn, count=50)
+    wandb.agent(sweep_id, function=hpo_fn, count=200)
