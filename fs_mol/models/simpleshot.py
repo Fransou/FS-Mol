@@ -14,32 +14,48 @@ class SimpleShotConfig:
     clip_grad_norm: float = 1.0
     center_data: bool = True
     normalize_norm: bool = True
+    distance: str = "cosine"
+    bias: bool = True
+    out_shape: int = 64
 
 
 class SimpleshotNet(nn.Module):
-    def __init__(self, input_prototypes, config: SimpleShotConfig):
+    def __init__(self, X_support_pos, X_support_neg, config: SimpleShotConfig):
         super().__init__()
         self.config = config
-        self.prototype_pos = nn.Parameter(
-            torch.tensor(input_prototypes[0]), requires_grad=True
+        inp_shape = X_support_pos.shape[1]
+        self.inp_layer = nn.Linear(
+            inp_shape, self.config.out_shape, bias=self.config.bias
         )
-        self.prototype_neg = nn.Parameter(
-            torch.tensor(input_prototypes[1]), requires_grad=True
-        )
-
-        self.bias_pos = nn.Parameter(torch.tensor(0.0), requires_grad=True)
-        self.bias_neg = nn.Parameter(torch.tensor(0.0), requires_grad=True)
-
         self.lmbd_entropy = config.lmbd_entropy
         self.temperature = config.temperature
         self.bce = nn.BCELoss()
         self.entropy = ShannonEntroy()
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+        self.X_support_pos = torch.tensor(X_support_pos, dtype=torch.float32)
+        self.X_support_neg = torch.tensor(X_support_neg, dtype=torch.float32)
 
     def forward(self, x):
-        x_pos = self.temperature * (self.cos(x, self.prototype_pos)+ self.bias_pos)
-        x_neg = self.temperature * (self.cos(x, self.prototype_neg) + self.bias_neg)
-        x = torch.sigmoid(x_pos) / (torch.sigmoid(x_pos) + torch.sigmoid(x_neg))
+        x_support_pos = self.inp_layer(self.X_support_pos)
+        x_support_neg = self.inp_layer(self.X_support_neg)
+        x_query = self.inp_layer(x)
+
+        prot_pos = x_support_pos.mean(axis=0)
+        prot_neg = x_support_neg.mean(axis=0)
+
+        if self.config.distance == "cosine":
+            x_pos = self.temperature * (self.cos(x_query, prot_pos))
+            x_neg = self.temperature * (self.cos(x_query, prot_neg))
+            x = torch.sigmoid(x_pos) / (torch.sigmoid(x_pos) + torch.sigmoid(x_neg))
+        elif self.config.distance == "euclidean":
+            x_pos = self.temperature * (
+                torch.norm(x_query- prot_pos, dim=1)
+            )
+            x_neg = self.temperature * (
+                torch.norm(x_query- prot_neg, dim=1)
+            )
+            x = torch.exp(-x_pos) / (torch.exp(-x_pos) + torch.exp(-x_neg))
+
         return x
 
     def predict(self, x):
